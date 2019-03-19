@@ -17,7 +17,11 @@ CFPropertyListRef MGCopyAnswer(CFStringRef);
 +(LSApplicationProxy *)applicationProxyForIdentifier:(NSString *)arg1;
 @property (nonatomic, readonly) NSString *applicationIdentifier; // bundle id
 @property (nonatomic, readonly) NSString *applicationType; // system app or user app
+@property(nonatomic, readonly) NSDictionary *iconsDictionary;
+@property(nonatomic, readonly) NSArray *appTags;
 -(NSString *)localizedName; // app name under icon
+- (NSArray *)_boundIconFileNames; // iOS 11 and up
+- (NSArray *)boundIconFileNames;  // iOS 10 and below
 @end
  
 @implementation MGAppPickerController
@@ -48,26 +52,29 @@ CFPropertyListRef MGCopyAnswer(CFStringRef);
 	NSMutableArray *systemApps = @[].mutableCopy;
 	NSMutableArray *userApps = @[].mutableCopy;
 	for (LSApplicationProxy *app in [self apps]) {
+        
+        if([self hasIconAndVisible:app]){
+        
 		if ([app.applicationType isEqualToString:@"User"])
 			[userApps addObject:app.applicationIdentifier];
-		else if ([app.applicationType isEqualToString:@"System"] || [app.applicationIdentifier isEqualToString:@"com.apple.springboard"]) // sprinboard type is "Hidden" so allow it if it's sprinboard regardless of type
+		else if ([app.applicationType isEqualToString:@"System"])
 			[systemApps addObject:app.applicationIdentifier];
 	}
-	[systemApps removeObjectsInArray:[self _hiddenDisplayIdentifiers]];
+    }
 	return @[[self sortArray:userApps], [self sortArray:systemApps]];
 }
 
-// there aren't any methods to see if app is visible so this is what I have to do, if anyone knows of a way to check if a LSApplicationProxy is hidden let me know so I can improve this
-// taken from: https://github.com/rpetrich/AppList/blob/master/ALApplicationList.x#L440-L501 + some bundle ids added myself
-// modified so it's better suited for this
--(NSArray *)_hiddenDisplayIdentifiers {
-	NSArray *result = hiddenDisplayIdentifiers;
-	if (!result) {
-		result = [[NSArray alloc] initWithObjects:@"com.apple.AdSheet", @"com.apple.AdSheetPhone", @"com.apple.AdSheetPad", @"com.apple.DataActivation", @"com.apple.DemoApp", @"com.apple.Diagnostics", @"com.apple.fieldtest", @"com.apple.iosdiagnostics", @"com.apple.iphoneos.iPodOut", @"com.apple.TrustMe", @"com.apple.WebSheet", @"com.apple.purplebuddy", @"com.apple.datadetectors.DDActionsService", @"com.apple.FacebookAccountMigrationDialog", @"com.apple.iad.iAdOptOut", @"com.apple.ios.StoreKitUIService", @"com.apple.TextInput.kbd", @"com.apple.MailCompositionService", @"com.apple.mobilesms.compose", @"com.apple.quicklook.quicklookd", @"com.apple.ShoeboxUIService", @"com.apple.social.remoteui.SocialUIService", @"com.apple.WebViewService", @"com.apple.gamecenter.GameCenterUIService", @"com.apple.appleaccount.AACredentialRecoveryDialog", @"com.apple.CompassCalibrationViewService", @"com.apple.WebContentFilter.remoteUI.WebContentAnalysisUI", @"com.apple.PassbookUIService", @"com.apple.uikit.PrintStatus", @"com.apple.Copilot", @"com.apple.MusicUIService", @"com.apple.AccountAuthenticationDialog", @"com.apple.MobileReplayer", @"com.apple.SiriViewService", @"com.apple.TencentWeiboAccountMigrationDialog", @"com.apple.AskPermissionUI", @"com.apple.CoreAuthUI", @"com.apple.family", @"com.apple.mobileme.fmip1", @"com.apple.GameController", @"com.apple.HealthPrivacyService", @"com.apple.InCallService", @"com.apple.mobilesms.notification", @"com.apple.PhotosViewService", @"com.apple.PreBoard", @"com.apple.PrintKit.Print-Center", @"com.apple.share", @"com.apple.SharedWebCredentialViewService", @"com.apple.webapp", @"com.apple.webapp1", @"com.apple.SafariViewService", @"com.apple.ScreenSharingViewService", @"com.apple.ServerDocuments", @"com.apple.social.SLGoogleAuth", @"com.apple.social.SLYahooAuth", @"com.apple.StoreDemoViewService", @"com.apple.VSViewService", @"com.apple.appleseed.FeedbackAssistant", @"com.apple.CloudKit.ShareBear", @"com.apple.SharingViewService", @"com.apple.GameController2", @"com.apple.DiagnosticsService", @"com.tonyk7.mgspoofhelper", nil];
-		hiddenDisplayIdentifiers = result;
-	}
-	return result;
+           
+- (BOOL)hasIconAndVisible:(LSApplicationProxy *)app {
+    BOOL iOS11AndPlus = kCFCoreFoundationVersionNumber > 1400;
+    NSArray *iconNames = (iOS11AndPlus) ? app._boundIconFileNames : app.boundIconFileNames;
+    if ((app.iconsDictionary || iconNames) &&
+       (![app.appTags containsObject:@"hidden"] || [app.applicationIdentifier isEqualToString:@"com.apple.springboard"])) {// springboard type is "Hidden" so allow it if it's springboard regardless of type
+    return YES;
+   }
+    return NO;
 }
+///Method to check if app is hidden taken from KBAppList here: https://github.com/kanesbetas/KBAppList/blob/8653e1ee511639d341380b603e98b4cbce556dfb/Source/kbapplist/KBAppList.mm#L109-L118
 
 -(void)loadView {
 	[super loadView];
