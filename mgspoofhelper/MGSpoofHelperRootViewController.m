@@ -3,9 +3,8 @@
 #import "MGSpoofHelperPrefs.h"
 #import "MGKeyPickerController.h"
 #import "MGAppPickerController.h"
-#import <dlfcn.h>
 
-CFStringRef (*MGCopyAnswer)(CFStringRef);
+CFPropertyListRef MGCopyAnswer(CFStringRef);
 
 #define mgValue(key) (__bridge NSString *)MGCopyAnswer((__bridge CFStringRef)key)
 #define CGRectSetWidth(rect, width) CGRectMake(rect.origin.x, rect.origin.y, width, rect.size.height);
@@ -18,9 +17,6 @@ CFStringRef (*MGCopyAnswer)(CFStringRef);
 -(void)loadView {
 	[super loadView];
 
-	if (!MGCopyAnswer)
-		MGCopyAnswer = (CFStringRef (*)(CFStringRef))(dlsym(dlopen("/usr/lib/libMobileGestalt.dylib", RTLD_GLOBAL | RTLD_LAZY), "MGCopyAnswer"));
-
 	[self updateKeysArray];
 	self.tableView.delegate = self;
 	self.tableView.dataSource = self;
@@ -30,7 +26,7 @@ CFStringRef (*MGCopyAnswer)(CFStringRef);
 	self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Apps" style:UIBarButtonItemStyleDone target:self action:@selector(selectApps)];
 
 	[[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(deviceRoated) name:UIDeviceOrientationDidChangeNotification object:nil];
+	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(deviceRoated) name:UIDeviceOrientationDidChangeNotification object:nil];
 }
 
 -(void)deviceRoated {
@@ -58,8 +54,6 @@ CFStringRef (*MGCopyAnswer)(CFStringRef);
 	[self updateKeysArray];
 	[self.tableView reloadData];
 }
-
-#pragma mark - Table View Data Source
 
 -(NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
 	if ([mgKeysToModify count] > 0) {
@@ -99,8 +93,9 @@ CFStringRef (*MGCopyAnswer)(CFStringRef);
 
 	// if we have a modified one in prefs, display that value of default one
 	id value = modifiedKeys[mgKey] ?: mgValue(mgKey);
-	BOOL isNumberValue = [value isKindOfClass:[NSNumber class]];
-	if ([value isKindOfClass:[NSString class]] || isNumberValue) {
+	NSString *valueString = [value description] ?: nil;
+
+	if (valueString) {
 		UILabel *mgValueLabel;
 		if (![cell viewWithTag:kMgValueLabelTag]) {
 			mgValueLabel = [[UILabel alloc] initWithFrame:CGRectZero];
@@ -108,7 +103,7 @@ CFStringRef (*MGCopyAnswer)(CFStringRef);
 		} else
 			mgValueLabel = (UILabel *)[cell viewWithTag:kMgValueLabelTag];
 
-		mgValueLabel.text = isNumberValue ? [value stringValue] : value;
+		mgValueLabel.text = valueString;
 		[mgValueLabel sizeToFit];
 		CGFloat cellWidth = [UIScreen mainScreen].bounds.size.width;
 		if (mgValueLabel.bounds.size.width >= cellWidth/2) {
@@ -151,11 +146,48 @@ CFStringRef (*MGCopyAnswer)(CFStringRef);
 		NSString *textInput = [setValueAlertController textFields][0].text;
 		if ([textInput isKindOfClass:[NSNumber class]])
 			numberForm = @([textInput integerValue]);
-		[objc_getClass("MGSpoofHelperPrefs") addToKey:mgKey withValue:(numberForm ?: textInput) inDictKey:@"modifiedKeys"];
+		[objc_getClass("MGSpoofHelperPrefs") addToKey:mgKey withValue:textInput inDictKey:@"modifiedKeys"];
+		[tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationFade];
+	}];
+	UIAlertAction *randomizeAction = [UIAlertAction actionWithTitle:@"Randomize" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+		int lengthNeeded = [mgValue(mgKey) description].length;
+		if ([mgValue(mgKey) isKindOfClass:[NSNumber class]]) {
+			// randomize number
+			NSMutableString *randomNumberString = [NSMutableString stringWithCapacity:lengthNeeded];
+			// make sure first number not 0
+			[randomNumberString appendString:@(arc4random_uniform(9)+1).stringValue];
+			for (int idx = 1; idx < lengthNeeded; idx++) {
+				[randomNumberString appendString:@(arc4random_uniform(10)).stringValue];
+			}
+			[objc_getClass("MGSpoofHelperPrefs") addToKey:mgKey withValue:@(randomNumberString.longLongValue) inDictKey:@"modifiedKeys"];
+		}
+		else {
+			// generates random string following same format as original (cap sensitive, numbers where they need to be, etc..)
+			NSMutableString *randomString = [NSMutableString stringWithCapacity:lengthNeeded];
+			NSString *value = [mgValue(mgKey) description];
+			for (int idx = 0; idx < lengthNeeded; idx++) {
+				unichar character = [value characterAtIndex:idx];
+				// for mac address
+				if (character == 58) { // 58 = ":"
+					[randomString appendString:@":"];
+					continue;
+				}
+				if (isdigit(character))
+					[randomString appendString:@(arc4random_uniform(10)).stringValue];
+				else {
+					if ([[NSCharacterSet uppercaseLetterCharacterSet] characterIsMember:character])
+						[randomString appendFormat:@"%c", (unichar)('A' + arc4random_uniform(26))];
+					else
+						[randomString appendFormat:@"%c", (unichar)('a' + arc4random_uniform(26))];
+				}
+			}
+			[objc_getClass("MGSpoofHelperPrefs") addToKey:mgKey withValue:randomString inDictKey:@"modifiedKeys"];
+		}
 		[tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationFade];
 	}];
 	UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
 	confirmAction.enabled = NO;
+	[setValueAlertController addAction:randomizeAction];
 	[setValueAlertController addAction:confirmAction];
 	[setValueAlertController addAction:cancelAction];
 	[self presentViewController:setValueAlertController animated:YES completion:nil];

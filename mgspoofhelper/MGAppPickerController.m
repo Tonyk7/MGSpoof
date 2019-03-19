@@ -1,7 +1,7 @@
 #import "MGAppPickerController.h"
 #import "MGSpoofHelperPrefs.h"
 
-#define kSpoofApps @"spoofApps"
+CFPropertyListRef MGCopyAnswer(CFStringRef);
 
 @interface UIImage (MGSpoofHelper)
 +(UIImage *)_applicationIconImageForBundleIdentifier:(NSString *)arg1 format:(int)arg2 scale:(float)arg3;
@@ -90,7 +90,12 @@
 }
 
 -(void)resetPrefs {
-	[[[NSUserDefaults alloc] initWithSuiteName:@"com.tonyk7.MGSpoofHelperPrefsSuite"] removePersistentDomainForName:[[NSBundle mainBundle] bundleIdentifier]];
+	NSUserDefaults *userDeafaults = [[NSUserDefaults alloc] initWithSuiteName:@"com.tonyk7.MGSpoofHelperPrefsSuite"];
+	// [userDeafaults removePersistentDomainForName:[NSBundle mainBundle].bundleIdentifier];
+	NSDictionary *defaultsDictionary = [userDeafaults dictionaryRepresentation];
+	for (NSString *key in defaultsDictionary.allKeys) {
+		[userDeafaults removeObjectForKey:key];
+    }
 	[self.tableView reloadData]; // turn off all switches
 }
 
@@ -158,7 +163,7 @@
 	}
 
 	// make uiswitch on if it should be enabled
-	if ([objc_getClass("MGSpoofHelperPrefs") handleAppPrefsWithAction:kExists inKey:kSpoofApps withValue:bundleID])
+	if ([objc_getClass("MGSpoofHelperPrefs") handleAppPrefsWithAction:kExists inKey:@"spoofApps" withValue:bundleID])
 		[cellSwitch setOn:YES animated:NO];
 
 	return cell;
@@ -168,10 +173,9 @@
 	UITableViewCell *cell = (UITableViewCell *)updatedSwitch.superview;
 	NSString *bundleID = cell.detailTextLabel.text;
 	if (updatedSwitch.isOn)
-		[objc_getClass("MGSpoofHelperPrefs") handleAppPrefsWithAction:kAdd inKey:kSpoofApps withValue:bundleID];
+		[objc_getClass("MGSpoofHelperPrefs") handleAppPrefsWithAction:kAdd inKey:@"spoofApps" withValue:bundleID];
 	else
-		[objc_getClass("MGSpoofHelperPrefs") handleAppPrefsWithAction:kRemove inKey:kSpoofApps withValue:bundleID];
-
+		[objc_getClass("MGSpoofHelperPrefs") handleAppPrefsWithAction:kRemove inKey:@"spoofApps" withValue:bundleID];
 }
 
 @end

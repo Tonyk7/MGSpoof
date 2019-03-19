@@ -36,7 +36,7 @@ static addr_t follow_branch64(const uint8_t *buf, addr_t branch) {
 // Our replaced version of MGCopyAnswer_internal
 static CFPropertyListRef (*orig_MGCopyAnswer_internal)(CFStringRef property, uint32_t *outTypeCode);
 CFPropertyListRef new_MGCopyAnswer_internal(CFStringRef property, uint32_t *outTypeCode) {
-	if (modifiedKeys[(__bridge NSString *)property] && [appsChosen containsObject:[NSBundle mainBundle].bundleIdentifier]) {
+	if (modifiedKeys[(__bridge NSString *)property]) {
 		return (__bridge CFStringRef)modifiedKeys[(__bridge NSString *)property];
 	}
 	return orig_MGCopyAnswer_internal(property, outTypeCode);
@@ -54,24 +54,30 @@ static void modifiedKeyUpdated() {
 }
 
 %ctor {
-	// basically dlopen libMobileGestalt
-	MSImageRef libGestalt = MSGetImageByName("/usr/lib/libMobileGestalt.dylib");
-	if (libGestalt) {
-		// Get "_MGCopyAnswer" symbol
-		void *MGCopyAnswerFn = MSFindSymbol(libGestalt, "_MGCopyAnswer");
-		/*
-		 * get address of MGCopyAnswer_internal by doing symbol + offset (should be 8 bytes)
-		 * note: hex implementation of MGCopyAnswer: 01 00 80 d2 01 00 00 14 (from iOS 9+)
-		 * so address of MGCopyAnswer + offset = MGCopyAnswer_internal. MGCopyAnswer_internal *always follows MGCopyAnswer (*from what I've checked)
-		 */
-		const uint8_t *MGCopyAnswer_ptr = (const uint8_t *)MGCopyAnswer;
-		addr_t branch = find_branch64(MGCopyAnswer_ptr, 0, 8);
-		addr_t branch_offset = follow_branch64(MGCopyAnswer_ptr, branch);
-		MSHookFunction(((void *)((const uint8_t *)MGCopyAnswerFn + branch_offset)), (void *)new_MGCopyAnswer_internal, (void **)&orig_MGCopyAnswer_internal);
+	@autoreleasepool {
+		// don't do anything if we in an app we don't want to spoof anything
+		if (![appsChosen containsObject:[NSBundle mainBundle].bundleIdentifier])
+			return;
+
+		// basically dlopen libMobileGestalt
+		MSImageRef libGestalt = MSGetImageByName("/usr/lib/libMobileGestalt.dylib");
+		if (libGestalt) {
+			// Get "_MGCopyAnswer" symbol
+			void *MGCopyAnswerFn = MSFindSymbol(libGestalt, "_MGCopyAnswer");
+			/*
+			 * get address of MGCopyAnswer_internal by doing symbol + offset (should be 8 bytes)
+			 * note: hex implementation of MGCopyAnswer: 01 00 80 d2 01 00 00 14 (from iOS 9+)
+			 * so address of MGCopyAnswer + offset = MGCopyAnswer_internal. MGCopyAnswer_internal *always follows MGCopyAnswer (*from what I've checked)
+			 */
+			const uint8_t *MGCopyAnswer_ptr = (const uint8_t *)MGCopyAnswer;
+			addr_t branch = find_branch64(MGCopyAnswer_ptr, 0, 8);
+			addr_t branch_offset = follow_branch64(MGCopyAnswer_ptr, branch);
+			MSHookFunction(((void *)((const uint8_t *)MGCopyAnswerFn + branch_offset)), (void *)new_MGCopyAnswer_internal, (void **)&orig_MGCopyAnswer_internal);
+		}
+		
+		CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)appsChosenUpdated, CFSTR("com.tonyk7.mgspoof/appsChosenUpdated"), NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
+		CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)modifiedKeyUpdated, CFSTR("com.tonyk7.mgspoof/modifiedKeyUpdated"), NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
+		appsChosenUpdated();
+		modifiedKeyUpdated();
 	}
-	
-	CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)appsChosenUpdated, CFSTR("com.tonyk7.mgspoof/appsChosenUpdated"), NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
-	CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)modifiedKeyUpdated, CFSTR("com.tonyk7.mgspoof/modifiedKeyUpdated"), NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
-	appsChosenUpdated();
-	modifiedKeyUpdated();
 }

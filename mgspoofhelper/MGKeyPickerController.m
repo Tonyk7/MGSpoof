@@ -1,6 +1,7 @@
 #import "MGKeyPickerController.h"
 #import "MGSpoofHelperPrefs.h"
-#import <dlfcn.h>
+
+CFPropertyListRef MGCopyAnswer(CFStringRef);
 
 @implementation MGKeyPickerController
 
@@ -31,7 +32,7 @@
 }
 
 -(NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
-	return 10;
+	return 9;
 }
 
 -(NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
@@ -39,36 +40,31 @@
 		case 0:
 			return @"Identifying Information";
 		case 1:
-			return @"Device Information";
-		case 2:
-			return @"Baseband Information";
-		case 3:
-			return @"Telephony Information";
-		case 4:
-			return @"Capability Information";
-		case 5:
-			return @"Regional Behaviour";
-		case 6:
-			return @"Wireless Information";
-		case 7:
-			return @"FaceTime Information";
-		case 8:
 			return @"Bluetooth Information";
-		case 9:
+		case 2:
 			return @"Battery Information";
-		case 10:
-			return @"More Device Capabilities";
+		case 3:
+			return @"Baseband Information";
+		case 4:
+			return @"Telephony Information";
+		case 5:
+			return @"Device Information";
+		case 6:
+			return @"Capability Information";
+		case 7:
+			return @"Regional Behaviour";
+		case 8:
+			return @"Wireless Information";
+		case 9:
+			return @"FaceTime Information";
 		default:
 			return @"Other";
 	}
 }
 
-
 -(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
 	return allKeys[section].count;
 }
-
-CFStringRef (*MGCopyAnswer)(CFStringRef);
 
 -(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
 	NSString *cellIdentifier = [NSString stringWithFormat:@"ChoicePickerCellS%ldR%ld", indexPath.section, indexPath.row];
@@ -85,15 +81,9 @@ CFStringRef (*MGCopyAnswer)(CFStringRef);
 		return cell;
 	}
 
-	if (!MGCopyAnswer)
-		MGCopyAnswer = (CFStringRef (*)(CFStringRef))(dlsym(dlopen("/usr/lib/libMobileGestalt.dylib", RTLD_GLOBAL | RTLD_LAZY), "MGCopyAnswer"));
-
 	cell.textLabel.text = mgKey;
 	id mgValueResponse = (__bridge id)MGCopyAnswer((__bridge CFStringRef)mgKey);
-	if ([mgValueResponse isKindOfClass:[NSString class]])
-		cell.detailTextLabel.text = mgValueResponse;
-	else if ([mgValueResponse isKindOfClass:[NSNumber class]])
-		cell.detailTextLabel.text = [mgValueResponse stringValue];
+	cell.detailTextLabel.text = [mgValueResponse description] ?: nil;
 
 	return cell;
 }
@@ -105,9 +95,6 @@ CFStringRef (*MGCopyAnswer)(CFStringRef);
 	}
 	return tableView.rowHeight;
 }
-
-
-#pragma mark - Table View Delegate
 
 -(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
 	if (!selectedItems)

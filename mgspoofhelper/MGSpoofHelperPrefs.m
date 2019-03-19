@@ -18,8 +18,7 @@
 			if ([value isKindOfClass:[NSString class]]) {
 				if (value && ![tempArray containsObject:value])
 					[tempArray addObject:value];
-			} else if ([value isKindOfClass:[NSArray class]]) {
-				if (value)
+			} else if (value && [value isKindOfClass:[NSArray class]]) {
 					tempArray = [tempArray arrayByAddingObjectsFromArray:value].mutableCopy;
 			}
 			break;
@@ -47,7 +46,6 @@
 	[userDefaults setValue:newDict forKey:dictKey];
 	notify_post("com.tonyk7.mgspoof/modifiedKeyUpdated");
 }
-
 
 +(void)removeKey:(NSString *)key inDictKey:(NSString *)dictKey {
 	NSUserDefaults *userDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"com.tonyk7.MGSpoofHelperPrefsSuite"];
