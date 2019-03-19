@@ -197,7 +197,7 @@ CFPropertyListRef MGCopyAnswer(CFStringRef);
 	UIAlertController *setValueAlertController = (UIAlertController *)self.presentedViewController;
 	BOOL hasValue = [textField.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]].length > 0;
 	if (setValueAlertController) {
-		UIAlertAction *okAction = setValueAlertController.actions[0]; // confirm button
+		UIAlertAction *okAction = setValueAlertController.actions[1]; // confirm button
 		okAction.enabled = hasValue;
 	}
 }
