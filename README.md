@@ -12,13 +12,13 @@ _0.0.1_:
 
 #### Q/A
 
-Q: What is this tweak?
+Q: What is this tweak?  
 A: for me it was a learning project but for you it's the ability to spoof device information (udid, serial number, etc..)
 
-Q: What can I do with this tweak?
+Q: What can I do with this tweak?  
 A: Evade bans from certain apps, mess with people, endless posibilities
 
-Q: Where can I get this tweak:
+Q: Where can I get this tweak:  
 A: [repo](http://tonyk7.github.io)
 
 #### other info
