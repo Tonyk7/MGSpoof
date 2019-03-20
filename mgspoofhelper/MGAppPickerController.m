@@ -13,15 +13,18 @@ CFPropertyListRef MGCopyAnswer(CFStringRef);
 -(NSArray *)allInstalledApplications;
 @end
 
-@interface LSApplicationProxy : NSObject
+@interface LSResourceProxy : NSObject
+@property (nonatomic, readonly) NSDictionary *iconsDictionary;
+@property (nonatomic, copy) NSArray *_boundIconFileNames; // iOS 11 and up
+@property (nonatomic, copy) NSArray *boundIconFileNames; // iOS 10 and below
+@end
+
+@interface LSApplicationProxy : LSResourceProxy
 +(LSApplicationProxy *)applicationProxyForIdentifier:(NSString *)arg1;
 @property (nonatomic, readonly) NSString *applicationIdentifier; // bundle id
 @property (nonatomic, readonly) NSString *applicationType; // system app or user app
-@property(nonatomic, readonly) NSDictionary *iconsDictionary;
 @property(nonatomic, readonly) NSArray *appTags;
 -(NSString *)localizedName; // app name under icon
-- (NSArray *)_boundIconFileNames; // iOS 11 and up
-- (NSArray *)boundIconFileNames;  // iOS 10 and below
 @end
  
 @implementation MGAppPickerController
@@ -52,29 +55,25 @@ CFPropertyListRef MGCopyAnswer(CFStringRef);
 	NSMutableArray *systemApps = @[].mutableCopy;
 	NSMutableArray *userApps = @[].mutableCopy;
 	for (LSApplicationProxy *app in [self apps]) {
-        
-        if([self hasIconAndVisible:app]){
-        
-		if ([app.applicationType isEqualToString:@"User"])
-			[userApps addObject:app.applicationIdentifier];
-		else if ([app.applicationType isEqualToString:@"System"])
-			[systemApps addObject:app.applicationIdentifier];
+		if ([self hasIconAndVisible:app]){
+			if ([app.applicationType isEqualToString:@"User"])
+				[userApps addObject:app.applicationIdentifier];
+			else if ([app.applicationType isEqualToString:@"System"])
+				[systemApps addObject:app.applicationIdentifier];
+		}
 	}
-    }
 	return @[[self sortArray:userApps], [self sortArray:systemApps]];
 }
 
-           
-- (BOOL)hasIconAndVisible:(LSApplicationProxy *)app {
-    BOOL iOS11AndPlus = kCFCoreFoundationVersionNumber > 1400;
-    NSArray *iconNames = (iOS11AndPlus) ? app._boundIconFileNames : app.boundIconFileNames;
-    if ((app.iconsDictionary || iconNames) &&
-       (![app.appTags containsObject:@"hidden"] || [app.applicationIdentifier isEqualToString:@"com.apple.springboard"])) {// springboard type is "Hidden" so allow it if it's springboard regardless of type
-    return YES;
-   }
-    return NO;
+/// Method to check if app is hidden taken from KBAppList here: https://github.com/kanesbetas/KBAppList/blob/8653e1ee511639d341380b603e98b4cbce556dfb/Source/kbapplist/KBAppList.mm#L109-L118
+-(BOOL)hasIconAndVisible:(LSApplicationProxy *)app {
+	BOOL iOS11AndPlus = kCFCoreFoundationVersionNumber > 1400;
+	NSArray *iconNames = iOS11AndPlus ? app._boundIconFileNames : app.boundIconFileNames;
+	// springboard type is "Hidden" so allow it if it's springboard regardless of type
+	if ((app.iconsDictionary || iconNames) && (![app.appTags containsObject:@"hidden"] || [app.applicationIdentifier isEqualToString:@"com.apple.springboard"]))
+		return YES;
+	return NO;
 }
-///Method to check if app is hidden taken from KBAppList here: https://github.com/kanesbetas/KBAppList/blob/8653e1ee511639d341380b603e98b4cbce556dfb/Source/kbapplist/KBAppList.mm#L109-L118
 
 -(void)loadView {
 	[super loadView];
@@ -102,7 +101,7 @@ CFPropertyListRef MGCopyAnswer(CFStringRef);
 	NSDictionary *defaultsDictionary = [userDeafaults dictionaryRepresentation];
 	for (NSString *key in defaultsDictionary.allKeys) {
 		[userDeafaults removeObjectForKey:key];
-    }
+	}
 	[self.tableView reloadData]; // turn off all switches
 }
 
