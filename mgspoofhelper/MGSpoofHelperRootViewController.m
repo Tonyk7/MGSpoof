@@ -146,7 +146,7 @@ CFPropertyListRef MGCopyAnswer(CFStringRef);
 		NSString *textInput = [setValueAlertController textFields][0].text;
 		if ([textInput isKindOfClass:[NSNumber class]])
 			numberForm = @([textInput integerValue]);
-		[objc_getClass("MGSpoofHelperPrefs") addToKey:mgKey withValue:textInput inDictKey:@"modifiedKeys"];
+		[objc_getClass("MGSpoofHelperPrefs") addToKey:mgKey withValue:(numberForm ?: textInput) inDictKey:@"modifiedKeys"];
 		[tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationFade];
 	}];
 	UIAlertAction *randomizeAction = [UIAlertAction actionWithTitle:@"Randomize" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
