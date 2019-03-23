@@ -67,6 +67,9 @@ CFPropertyListRef MGCopyAnswer(CFStringRef);
 
 /// Method to check if app is hidden taken from KBAppList here: https://github.com/kanesbetas/KBAppList/blob/8653e1ee511639d341380b603e98b4cbce556dfb/Source/kbapplist/KBAppList.mm#L109-L118
 -(BOOL)hasIconAndVisible:(LSApplicationProxy *)app {
+	// so mgspoofhelper doesn't show up in list
+	if ([app.applicationIdentifier isEqualToString:@"com.tonyk7.mgspoofhelper"])
+		return NO;
 	BOOL iOS11AndPlus = kCFCoreFoundationVersionNumber > 1400;
 	NSArray *iconNames = iOS11AndPlus ? app._boundIconFileNames : app.boundIconFileNames;
 	// springboard type is "Hidden" so allow it if it's springboard regardless of type
