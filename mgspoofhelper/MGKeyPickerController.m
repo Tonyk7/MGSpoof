@@ -67,7 +67,7 @@ CFPropertyListRef MGCopyAnswer(CFStringRef);
 }
 
 -(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-	NSString *cellIdentifier = [NSString stringWithFormat:@"ChoicePickerCellS%ldR%ld", indexPath.section, indexPath.row];
+	NSString *cellIdentifier = [NSString stringWithFormat:@"ChoicePickerCellS%ldR%ld", (long)indexPath.section, (long)indexPath.row];
 	UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellIdentifier];
 
 	if (!cell) {
