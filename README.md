@@ -1,7 +1,14 @@
 # MGSpoofer (spoof MGCopyAnswer)
 
 #### update log
- _0.0.2_:
+
+_0.0.3_ (credit: **[@jakeashacks](https://twitter.com/jakeashacks)**):
+- iOS 13 support
+- checkra1n fix
+- bug fix
+- allow SpringBoard
+
+_0.0.2_:
 - added randomize value button (follows same format as original)
 - fixed names of sections for key page
 - fixed "Reset Prefs" button to actually reset prefs
