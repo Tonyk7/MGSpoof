@@ -58,7 +58,7 @@ CFPropertyListRef MGCopyAnswer(CFStringRef);
 		if ([self hasIconAndVisible:app]){
 			if ([app.applicationType isEqualToString:@"User"])
 				[userApps addObject:app.applicationIdentifier];
-			else if ([app.applicationType isEqualToString:@"System"])
+			else if ([app.applicationType isEqualToString:@"System"] || [app.applicationIdentifier isEqualToString:@"com.apple.springboard"])
 				[systemApps addObject:app.applicationIdentifier];
 		}
 	}
@@ -70,11 +70,13 @@ CFPropertyListRef MGCopyAnswer(CFStringRef);
 	// so mgspoofhelper doesn't show up in list
 	if ([app.applicationIdentifier isEqualToString:@"com.tonyk7.mgspoofhelper"])
 		return NO;
-	BOOL iOS11AndPlus = kCFCoreFoundationVersionNumber > 1400;
-	NSArray *iconNames = iOS11AndPlus ? app._boundIconFileNames : app.boundIconFileNames;
-	// springboard type is "Hidden" so allow it if it's springboard regardless of type
-	if ((app.iconsDictionary || iconNames) && (![app.appTags containsObject:@"hidden"] || [app.applicationIdentifier isEqualToString:@"com.apple.springboard"]))
+    
+    if ([app.applicationIdentifier isEqualToString:@"com.apple.springboard"])
+        return YES;
+    
+	if (app.iconsDictionary && ![app.appTags containsObject:@"hidden"] && ![app.appTags containsObject:@"SBInternalAppTag"])
 		return YES;
+    
 	return NO;
 }
 
@@ -146,7 +148,7 @@ CFPropertyListRef MGCopyAnswer(CFStringRef);
 
 
 -(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-	NSString *cellIdentifier = [NSString stringWithFormat:@"AppPickerCellC%ldR%ld", indexPath.section, indexPath.row];
+	NSString *cellIdentifier = [NSString stringWithFormat:@"AppPickerCellC%ldR%ld", (long)indexPath.section, (long)indexPath.row];
 	UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellIdentifier];
 
 	if (!cell) {

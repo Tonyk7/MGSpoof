@@ -37,7 +37,7 @@ static addr_t follow_branch64(const uint8_t *buf, addr_t branch) {
 static CFPropertyListRef (*orig_MGCopyAnswer_internal)(CFStringRef property, uint32_t *outTypeCode);
 CFPropertyListRef new_MGCopyAnswer_internal(CFStringRef property, uint32_t *outTypeCode) {
 	if (modifiedKeys[(__bridge NSString *)property]) {
-		return (__bridge CFStringRef)modifiedKeys[(__bridge NSString *)property];
+		return (__bridge_retained CFStringRef)modifiedKeys[(__bridge NSString *)property];
 	}
 	return orig_MGCopyAnswer_internal(property, outTypeCode);
 }
